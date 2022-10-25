@@ -47,7 +47,7 @@ void setup() {
 }
 
 void loop() {  //Main loop, waits for a scancode
-  do if (scancode) convfull(); while (status >> 4 == 0);
+  do if (scancode) convfull(); while (status >> 4 == 0);  //Run the converter when a scancode arrives
   do if (scancode) convtoho(); while (status >> 4 == 1);  //Don't forget to change last map ID in nextmap() when adding new layouts
   do if (scancode) convyume(); while (status >> 4 != 0);  //Last map condition suggestion
 }
@@ -64,7 +64,7 @@ void pc98send() {  //Output PC-98 scancode
     #else
     while (digitalRead(RDY) == HIGH);  //Wait until host is ready (might hang?)
     if (digitalRead(RTY) == LOW && digitalRead(RST) == LOW) delayMicroseconds(30);  //Reset request (delay might be too long, someone needs to translate the timing chart on page 346)
-    pc98ser.write(scancode);  //Ne proshlo i goda...
+    pc98ser.write(scancode);  //He npowJIo u roga...
     #endif
   }
   if (scancode == 0xFF) status &= 0b11111110;  //Unset keybreak
@@ -72,26 +72,26 @@ void pc98send() {  //Output PC-98 scancode
 }
 
 void ps2send(uint8_t inpcom) {  //Send PS/2 command, needs some work, but it's not crucial and it functions
-  uint32_t exectime = 0;
-  command = inpcom;
+  uint32_t exectime = 0;  //Usage of millis() in this function is questionable, really
+  command = inpcom;  //Bring command byte outside
   while (ps2clk < 10) delay(1);  //Removing the delay hangs it...
-  detachInterrupt(digitalPinToInterrupt(CLOCK));
+  detachInterrupt(digitalPinToInterrupt(CLOCK));  //Detach receive interrupt, if attached
   pinMode(CLOCK, OUTPUT);
-  digitalWrite(CLOCK, LOW);
-  exectime = millis();
-  delayMicroseconds(120);
-  ps2clk = 0;
-  attachInterrupt(digitalPinToInterrupt(CLOCK), ps2tx, FALLING);
+  digitalWrite(CLOCK, LOW);  //Bring clock low for at least 100 us
+  exectime = millis();  //Remember time on transmission start
+  delayMicroseconds(120);  //100 might be enough
+  ps2clk = 0;  //Init clock counter for transmit interrupt
+  attachInterrupt(digitalPinToInterrupt(CLOCK), ps2tx, FALLING);  //Attach transmit interrupt
   pinMode(DATA, OUTPUT);
-  digitalWrite(DATA, LOW);
+  digitalWrite(DATA, LOW);  //Bring data low
   pinMode(CLOCK, INPUT_PULLUP);
   while (ps2clk < 12) if (millis() - exectime > 17) {  //Works, no idea how. Stops working if millis() check is removed
     pinMode(DATA, INPUT_PULLUP);
     ps2clk = 12;
   }
-  detachInterrupt(digitalPinToInterrupt(CLOCK));
-  ps2clk = 10;
-  attachInterrupt(digitalPinToInterrupt(CLOCK), ps2rx, FALLING);
+  detachInterrupt(digitalPinToInterrupt(CLOCK));  //Detach transmit interrupt
+  ps2clk = 10;  //Reset clock counter
+  attachInterrupt(digitalPinToInterrupt(CLOCK), ps2rx, FALLING);  //Attach (reattach) receive interrupt
 }
 
 //IMPORTANT: when Num Lock is enabled on a PS/2 keyboard nav cluster and arrow keys produce E0 12 ("fake shift") before
@@ -274,7 +274,7 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
   pc98send();
 }
 
-void convtoho() {  //Autistic optimized layout for a certain game series
+void convtoho() {  //Autistic optimized layout for a certain game series, efficiency to be determined
   #ifdef usbser  //USB debugging
   usbser.print(scancode, HEX);
   usbser.print(" ");
@@ -292,7 +292,7 @@ void convtoho() {  //Autistic optimized layout for a certain game series
     case 0x74: scancode = 0x3C; status &= 0b11111101; break;  //Right
     case 0x75: scancode = 0x3A; status &= 0b11111101; break;  //Up
     case 0x76: scancode = 0x00; break;  //Esc
-    //case 0x77: locktgl(1); break;  //Num Lock, indicators will be broken, see locktgl 
+    //case 0x77: locktgl(1); break;  //Num Lock, indicators will be broken, see locktgl
     //PRO TIP: press Num Lock odd number of times (once) when using this map to reduce the amount of scancodes generated when arrow keys are used with shift.
     //         This produces proportionally more scancodes for unshifted presses though, so not suitable for Reiiden, Fuumaroku, Yumejikuu...
     case 0xE0: status |= 0b00000010; break;  //Set extend flag
@@ -333,26 +333,26 @@ void convyume() {  //Comfortable layout for multiplayer in Yumejikuu, doesn't pa
 
 void ps2rx() {  //PS/2 receive interrupt
   static uint8_t incoming = 0;  //Received byte buffer
-  static uint32_t lasttime = 0;
-  uint32_t currtime;
-  incoming |= (digitalRead(DATA) << ps2clk);
+  static uint32_t lasttime = 0;  //millis() value (time elapsed since MCU startup) during last interrupt
+  uint32_t currtime;  //Current millis() value
+  incoming |= (digitalRead(DATA) << ps2clk);  //Everything past ps2clk == 7 gets shifted away
   if (ps2clk == 7) {  //Got something, hurry, no time for parity!
     scancode = incoming;  //Pass buffer outside
     incoming = 0;  //Clear buffer
   }
-  if (ps2clk == 10) ps2clk = 0;
-  else ps2clk++;
+  if (ps2clk == 10) ps2clk = 0;  //Start bit is ps2clk == 10, next bit is the first data bit
+  else ps2clk++;  //Next bit
   currtime = millis();  //Check if the transmission was interrupted
   if (currtime - lasttime > 2) {  //1 ms sometimes produces errors, 2 ms is fine
     ps2clk = 0;  //Next bit should be the first bit of data
     incoming = 0;  //Clear buffer
   }
-  lasttime = currtime;
+  lasttime = currtime;  //Remember current millis()
 }
 
 void ps2tx() {  //PS/2 transmit interrupt
-  static bool parity;
-  bool outgoing = 0;
+  static bool parity;  //Parity bit
+  bool outgoing = 0;  //Data bit buffer
   switch (ps2clk) {
     case 0: parity = 1; break;  //Odd parity
     case 1:
@@ -363,12 +363,12 @@ void ps2tx() {  //PS/2 transmit interrupt
     case 6:
     case 7:
     case 8:
-      outgoing = (command >> (ps2clk - 1)) & 0b00000001;
-      digitalWrite(DATA, outgoing);
-      parity ^= outgoing;
+      outgoing = (command >> (ps2clk - 1)) & 0b00000001;  //Get bit from byte
+      digitalWrite(DATA, outgoing);  //Output data bit
+      parity ^= outgoing;  //Calculate parity
       break;
-    case 9: digitalWrite(DATA, parity); break;
-    case 10: pinMode(DATA, INPUT_PULLUP); break;
+    case 9: digitalWrite(DATA, parity); break;  //Output parity bit
+    case 10: pinMode(DATA, INPUT_PULLUP); break;  //Set pin mode to input, outputting the stop bit as a result of pull-up
   }
-  ps2clk++;
+  ps2clk++;  //Next bit
 }
