@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// PS/2 (AT) to PC-9800 Series keyboard converter V1.0 (25.10.2022)           //
+// PS/2 (AT) to PC-9800 Series keyboard converter V1.0A (25.10.2022)          //
 // copyleft zake 2022 (look, just don't sell arduinos with this for stupid    //
 // money on ebay or yahoo auctions or wherever)                               //
 // Discord: zake#0138 (granted they haven't banned me again).                 //
@@ -260,10 +260,10 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
     case 0x77: locktgl(1); break;  //Num Lock
     case 0x78: scancode = 0x52; break;  //F11 (VF1)
     case 0x79: scancode = 0x49; break;  //Numpad +
-    case 0x7A: if (status & 0b00000110) {scancode = 0x37; status &= 0b11111101;} else scancode = 0x4C; break;  //Numpad 3, Page Down (ROLL DOWN)
+    case 0x7A: if (status & 0b00000110) {scancode = 0x36; status &= 0b11111101;} else scancode = 0x4C; break;  //Numpad 3, Page Down (ROLL UP)
     case 0x7B: scancode = 0x40; break;  //Numpad -
     case 0x7C: if (status & 0b00000010) {scancode = 0x60; status &= 0b11111101;} else scancode = 0x45; break;  //Numpad *, Print Screen (STOP) <-------------------
-    case 0x7D: if (status & 0b00000110) {scancode = 0x36; status &= 0b11111101;} else scancode = 0x44; break;  //Numpad 9, Page Up (ROLL UP)
+    case 0x7D: if (status & 0b00000110) {scancode = 0x37; status &= 0b11111101;} else scancode = 0x44; break;  //Numpad 9, Page Up (ROLL DOWN)
     case 0x7E: scancode = 0x61; break;  //Scroll Lock (COPY) <-------------------
     case 0x83: scancode = 0x68; break;  //F7
     case 0xE0: status |= 0b00000010; break;  //Set extend flag
