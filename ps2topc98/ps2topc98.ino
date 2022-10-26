@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// PS/2 (AT) to PC-9800 Series keyboard converter V1.0A (25.10.2022)          //
+// PS/2 (AT) to PC-9800 Series keyboard converter V1.1                        //
 // copyleft zake 2022 (look, just don't sell arduinos with this for stupid    //
 // money on ebay or yahoo auctions or wherever)                               //
 // Discord: zake#0138 (granted they haven't banned me again).                 //
@@ -44,6 +44,7 @@ void setup() {
   delay(500);  //Wait until self-test is complete
   ps2send(0xF3);  //ps2send will attach a receive interrupt after it's done
   ps2send(0x22);  //Set typematic delays similar to that of a PC-98 keyboard (roughly 500 ms delay and 24.6 cps)
+  status &= 0b11111011; locks |= 0b00000010; ps2send(0xED); ps2send(locks & 0b00001111);  //Num Lock on startup, all in one line for ease of commenting out
 }
 
 void loop() {  //Main loop, waits for a scancode
@@ -330,6 +331,34 @@ void convyume() {  //Comfortable layout for multiplayer in Yumejikuu, doesn't pa
   }
   pc98send();
 }
+
+/*void convymsp() {  //Play against yourself in Yumejikuu, if you dare
+  #ifdef usbser  //USB debugging
+  usbser.print(scancode, HEX);
+  usbser.print(" ");
+  #endif
+  switch (scancode) {                   //PS2 key (In-game function)
+    case 0x12: if (status & 0b00000010) {scancode = 0xFF; status &= 0b11111101;} else scancode = 0x2A; break;  //LShift (P1 Bomb), dismiss fake shifts
+    case 0x15: scancode = 0x10; break;  //Q (Quit)
+    case 0x1B: scancode = 0x2D; break;  //S (P1 Down)
+    case 0x1C: scancode = 0x20; break;  //A (P1 Left)
+    case 0x1D: scancode = 0x14; break;  //W (P1 Up)
+    case 0x23: scancode = 0x22; break;  //D (P1 Right)
+    case 0x29: scancode = 0x29; break;  //Space (P1 Shot)
+    case 0x5A: scancode = 0x3C; status &= 0b11111101; break;  //Enter, Numpad Enter (P2 Bomb)
+    case 0x6B: scancode = 0x46; status &= 0b11111101; break;  //Numpad 4 (P2 Left)
+    case 0x73: scancode = 0x4B; break;  //Numpad 5 (P2 Down)
+    case 0x74: if (status & 0b00000010) {scancode = 0x3B; status &= 0b11111101;} else scancode = 0x48; break;  //Numpad 6 (P2 Right), Left (P2 Shot)
+    case 0x75: scancode = 0x43; status &= 0b11111101; break;  //Numpad 8 (P2 Up)
+    case 0x76: scancode = 0x00; break;  //Esc (Pause)
+    //case 0x77: locktgl(1); break;  //Num Lock, indicators will be broken, see locktgl
+    case 0xE0: status |= 0b00000010; break;  //Set extend flag
+    case 0xE1: nextmap(); break;  //Pause Break (switch to next map)
+    case 0xF0: status |= 0b00000001; break;  //Set keybreak
+    default: scancode = 0xFF;  //Invalid scancode (do not output)
+  }
+  pc98send();
+}*/
 
 void ps2rx() {  //PS/2 receive interrupt
   static uint8_t incoming = 0;  //Received byte buffer
