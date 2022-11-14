@@ -56,7 +56,7 @@ void setup() {
   #else
   pc98ser.begin(19200, SERIAL_8O1);  //Start PC-98 interface
   #endif
-  delay(1000);  //Wait until self-test is complete, 1 s should work on most of keyboards, increase if status LEDs don't update on startup
+  delay(1000);  //Wait until self-test is complete, 1 s should work on most keyboards, increase if status LEDs don't update on startup
   tmset();  //Set typematic timings, ps2send will attach a receive interrupt after it's done
   #ifdef numlock  //Num Lock on startup
   status &= 0b11111011; 
@@ -74,7 +74,7 @@ void loop() {  //Main loop, waits for a scancode
 
 void reset() {  //Keyboard reset
   ps2send(0xFF);  //Send reset request
-  delay(750);  //Wait until self-test is complete, 750 ms should work on most of keyboards, increase if status LEDs don't update on reset
+  delay(750);  //Wait until self-test is complete, 750 ms should work on most keyboards, increase if status LEDs don't update on reset
   tmset();  //Reset typematic delays
   #ifndef numkeep
   #ifdef numlock  //Num Lock on reset
