@@ -56,7 +56,7 @@ void setup() {
   #else
   pc98ser.begin(19200, SERIAL_8O1);  //Start PC-98 interface
   #endif
-  delay(500);  //Wait until self-test is complete
+  delay(1000);  //Wait until self-test is complete, 1 s should work on most of keyboards, increase if status LEDs don't update on startup
   tmset();  //Set typematic timings, ps2send will attach a receive interrupt after it's done
   #ifdef numlock  //Num Lock on startup
   status &= 0b11111011; 
@@ -74,7 +74,7 @@ void loop() {  //Main loop, waits for a scancode
 
 void reset() {  //Keyboard reset
   ps2send(0xFF);  //Send reset request
-  delay(500);  //Wait until self-test is complete
+  delay(750);  //Wait until self-test is complete, 750 ms should work on most of keyboards, increase if status LEDs don't update on reset
   tmset();  //Reset typematic delays
   #ifndef numkeep
   #ifdef numlock  //Num Lock on reset
@@ -326,6 +326,7 @@ void convtoho() {  //Fast predictive converter for a certain game series, lots o
     case 0x12: if (ps2clk == 6) {if (status & 0b00000010) {scancode = 0xFF; status &= 0b11111101;} else scancode = 0x70;} else scancode = 0xFE; break;  //LShift (SHIFT), dismiss fake shifts
     case 0x15: if (ps2clk == 8) scancode = 0x10; else scancode = 0xFE; break;  //Q
     case 0x19: scancode = 0x70; break;  //RShift (SHIFT)
+    //case 0x19: if (ps2clk == 5) scancode = 0x70; else scancode = 0xFE; break;  //RShift (SHIFT)
     case 0x32: scancode = 0x3D; status &= 0b11111101; break;  //Down, will stick if you press B, press and release down to fix, or use the line below (theoretically slower)
     //case 0x32: if (ps2clk == 6) scancode = 0x3D; else scancode = 0xFE; status &= 0b11111101; break;  //Down
     case 0x35: scancode = 0x3A; status &= 0b11111101; break;  //Up, will stick if you press Y, press and release down to fix, or use the line below (theoretically slower)
