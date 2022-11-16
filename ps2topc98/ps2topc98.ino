@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// PS/2 (AT) to PC-9800 Series keyboard converter V1.2                        //
+// PS/2 (AT) to PC-9800 Series keyboard converter V1.3                        //
 // copyleft zake 2022 (look, just don't sell arduinos with this for stupid    //
 // money on ebay or yahoo auctions or wherever)                               //
 // Discord: zake#0138 (granted they haven't banned me again).                 //
@@ -41,7 +41,7 @@ uint8_t tmrate = pc98tm;  //Typematic delays
 uint8_t status = 0b00000100;  //Bit 0 - keybreak;
                               //bit 1 - extend;
                               //bit 2 - num lock (inverted, repeated here for quicker evaluations in converters);
-                              //bit 3 - reserved;
+                              //bit 3 - scan code set 3;
                               //bit 4 - predictive conversion;
                               //bits 5-7 - map ID
 
@@ -53,6 +53,7 @@ void setup() {
   pinMode(DATA, INPUT_PULLUP);  //Init PS/2 interface pins
   #ifdef usbser  //USB debugging
   usbser.begin(500000, SERIAL_8N1);
+  ps2send(0xFF);  //Debug reset
   #else
   pc98ser.begin(19200, SERIAL_8O1);  //Start PC-98 interface
   #endif
@@ -67,10 +68,14 @@ void setup() {
 
 void loop() {  //Main loop, waits for a scancode
   do if (scancode) convfull(); while (status >> 5 == 0);  //Run the converter when a scancode arrives
-  do if (scancode) convtoho(); while (status >> 5 == 1);  //Don't forget to change last map ID in nextmap() when adding new layouts
+  if (status & 0b00001000) {  //Check if next map is using scan code set 3
+    do if (scancode) convgame(); while (status >> 5 == 1);  //Run scan code set 3 converter
+  } else {
+    do if (scancode) convtoho(); while (status >> 5 == 1);  //Run scan code set 2 converter
+  }
   do if (scancode) convyume(); while (status >> 5 == 2);
   do if (scancode) convymsp(); while (status >> 5 != 0);  //Last map condition suggestion
-}
+}  //Don't forget to verify nextmap() when adding new layouts
 
 void reset() {  //Keyboard reset
   ps2send(0xFF);  //Send reset request
@@ -92,10 +97,21 @@ void tmset() {  //Set keyboard typematic delays
   ps2send(tmrate);  //Send typematic delays
 }
 
-void ledset(uint8_t ledstatus) {
+void ledset(uint8_t ledstatus) {  //Set keyboard LEDs
   ps2send(0xED);  //Send set LEDs command
   if (ledstatus < 0x10) ps2send(ledstatus);  //Send LED status if valid
   else ps2send(locks & 0b00001111);  //Otherwise show current lock status
+}
+
+uint8_t codeset(uint8_t codeid) {  //Set keyboard's scan code set
+  if (codeid > 0) {
+    ps2send(0xF0);  //Set scan code set command
+    ps2send(codeid);  //Send new scan code set ID
+  }
+  ps2send(0xF0);  //Set scan code set command
+  ps2send(0x00);  //Argument to return the current scan code set
+  delay(5);  //Wait for keyboard's response (tweak if keyboard goes into set 3 and nextmap() indicates an error going back to set 2)
+  return scancode;  //Return current scan code set
 }
 
 void pc98send(uint8_t sendcode) {  //Output PC-98 scancode
@@ -129,7 +145,7 @@ void pc98send(uint8_t sendcode) {  //Output PC-98 scancode
 }
 
 void ps2send(uint8_t command) {  //Send PS/2 command
-  uint32_t exectime = 0;  //Usage of millis() in this function is questionable, really
+  uint32_t exectime = 0;  //millis() value when the transmission began
   while (ps2clk < 10) delay(1);  //Wait for the reception to end
   detachInterrupt(digitalPinToInterrupt(CLOCK));  //Detach receive interrupt, if attached
   ps2data = command;  //Bring command byte outside
@@ -143,10 +159,8 @@ void ps2send(uint8_t command) {  //Send PS/2 command
   digitalWrite(DATA, LOW);  //Pull data low, start bit
   attachInterrupt(digitalPinToInterrupt(CLOCK), ps2tx, FALLING);  //Attach transmit interrupt
   pinMode(CLOCK, INPUT_PULLUP);  //Release clock
-  while (ps2clk != 11) if (millis() - exectime > 17) {  //Wait for transmission to end or fail (stops working if you look at it the wrong way)
-    pinMode(DATA, INPUT_PULLUP);  //Set pin mode to input, assuming it's still an output
-    ps2clk = 11;  //Get out of the loop
-  }
+  while (millis() - exectime < 19) if (ps2clk == 11) exectime = 0;  //Wait for transmission to end or fail
+  if (ps2clk != 11) pinMode(DATA, INPUT_PULLUP);  //Set pin mode to input, assuming it's still an output
   detachInterrupt(digitalPinToInterrupt(CLOCK));  //Detach transmit interrupt
   ps2clk = 10;  //Reset clock counter
   if (status & 0b00010000) attachInterrupt(digitalPinToInterrupt(CLOCK), ps2rxfast, FALLING);
@@ -178,15 +192,41 @@ void nextmap() {  //Switch to the next conversion table
   int8_t map;
   detachInterrupt(digitalPinToInterrupt(CLOCK));  //Detach PS/2 interrupt ASAP to ignore the rest of the scancodes for Pause Break
   delay(50);  //Wait until Pause Break is done vomiting scancodes
+  ps2clk = 10;  //In case interrupt fired
   map = status >> 5;  //Get map ID from status
   status &= 0b00001100;  //Reset keybreak, extend, predictive conversion and map ID
   if (map < 3) map++; else map = 0;  //Change condition when adding new maps, up to 8 total (0 through 7)
   status |= map << 5;  //Set new map ID
-  if (map == 1) status |= 0b00010000;  //Set predictive conversion for map 1
-  ps2clk = 10;  //In case interrupt fired
-  if (map > 0) {  //Different initialization procedures for maps greater than 0, please consider when adding new maps
+  if (map == 1) {  //Map 1 setup
+    if (locks >> 1 != 3 && codeset(0x03) == 0x03) {  //If the switch to scan code set 3 was successful
+      status |= 0b00001000;  //Set scan code set 3 bit
+      ps2send(0xF8);  //Disable typematic
+    }
+    status |= 0b00010000;  //Set predictive conversion for map 1
+  }
+  if (map > 1 && status & 0b00001000) {  //For maps greater than 1 if scan code set was changed
+    if (codeset(0x02) == 0x02) status &= 0b11110111;  //Try switching to scan code set 2 and unset scan code set 3 bit
+    else {  //Otherwise don't switch and indicate an error
+      map--;  //Return to previous map
+      status &= 0b00001111;  //Reset map ID
+      status |= map << 5;  //Set new map ID
+      ledset(0x01); delay(100);  //Error indication sequence
+      ledset(0x04); delay(100);
+      ledset(0x02); delay(100);
+      ledset(0x04); delay(100);
+      ledset(0x01); delay(100);
+      ledset(0x00); delay(100);
+      ledset(0x01); delay(100);
+      ledset(0x00); delay(100);
+      ledset(0x01); delay(100);
+      ledset(0x00); delay(100);
+      ledset(0x01); delay(500);
+      ledset(0x00); delay(500);
+    }
+  }
+  if (map > 0) {  //Different initialization procedures for maps greater than 0
     tmrate = 0x7F;  //Slowest typematic, might increase performance in games
-    tmset();  //0xF8 disables typematic completely, but requires migrating to Set 3 thus breaking AT keyboard compatibility
+    tmset();  //Set typematic delays
     while (map > -1) {  //Blink to indicate mode ID
       ledset(0x00); delay(100);  //Turn off all LEDs for 100 ms
       ledset(0x07);  //Turn on all LEDs
@@ -194,6 +234,11 @@ void nextmap() {  //Switch to the next conversion table
       else {delay(100); map--;}  //Up to 3 short flashes (100 ms)
     }
     ledset(0x00);  //Turn off all LEDs
+    if (status & 0b00001000) {  //If scan code set 3 is enabled
+      delay(100);
+      ledset(0x01); delay(500);  //Turn on scroll lock LED for 200 ms to indicate scan code set 3
+      ledset(0x00);  //Turn off all LEDs
+    }
   } else {
     tmrate = pc98tm;  //Set PC-98 typematic again
     reset();  //Reset to blink the LEDs and set num lock
@@ -315,33 +360,111 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
 }
 
 void convtoho() {  //Fast predictive converter for a certain game series, lots of phantom mappings (see if you can find an unintended feature)
-  //Can't be debugged like other converters due to tight timings
+  //Can't be easily debugged like other converters due to tight timings
   switch (scancode) {  //PS2 key (PC98 KEY, if different)
-    case 0x02: if (ps2clk == 5) scancode = 0x2A; else scancode = 0xFE; break;  //X
-    case 0x03: if (ps2clk == 3) scancode = 0x3B; else scancode = 0xFE; status &= 0b11111101; break;  //Left
-    case 0x04: if (ps2clk == 3) scancode = 0x3C; else scancode = 0xFE; status &= 0b11111101; break; break;  //Right
-    case 0x09: if (ps2clk == 5) scancode = 0x34; else scancode = 0xFE; break;  //Space
-    case 0x0A: scancode = 0x29; status &= 0b11111101; break;  //Z, Enter, Numpad Enter
-    //case 0x0A: if (ps2clk == 4) scancode = 0x29; else scancode = 0xFE; status &= 0b11111101; break;  //Z, Enter, Numpad Enter
-    case 0x12: if (ps2clk == 6) {if (status & 0b00000010) {scancode = 0xFF; status &= 0b11111101;} else scancode = 0x70;} else scancode = 0xFE; break;  //LShift (SHIFT), dismiss fake shifts
-    case 0x15: if (ps2clk == 8) scancode = 0x10; else scancode = 0xFE; break;  //Q
-    case 0x19: scancode = 0x70; break;  //RShift (SHIFT)
-    //case 0x19: if (ps2clk == 5) scancode = 0x70; else scancode = 0xFE; break;  //RShift (SHIFT)
-    case 0x32: scancode = 0x3D; status &= 0b11111101; break;  //Down, will stick if you press B, press and release down to fix, or use the line below (theoretically slower)
-    //case 0x32: if (ps2clk == 6) scancode = 0x3D; else scancode = 0xFE; status &= 0b11111101; break;  //Down
-    case 0x35: scancode = 0x3A; status &= 0b11111101; break;  //Up, will stick if you press Y, press and release down to fix, or use the line below (theoretically slower)
-    //case 0x32: if (ps2clk == 6) scancode = 0x3D; else scancode = 0xFE; status &= 0b11111101; break;  //Down
-    case 0x76: if (ps2clk == 8) scancode = 0x00; else scancode = 0xFE; break;  //Esc
-    //case 0x77: locktgl(1); break;  //Num Lock, indicators will be broken, see locktgl
+    case 0x03: if (ps2clk == 5) scancode = 0x2A; else scancode = 0xFE; break;  //X
+    case 0x04: if (ps2clk == 3) scancode = 0x3B; else scancode = 0xFE; status &= 0b11111101; break;  //Left
+    case 0x05: if (ps2clk == 3) scancode = 0x3C; else scancode = 0xFE; status &= 0b11111101; break; break;  //Right
+    case 0x0A: if (ps2clk == 5) scancode = 0x34; else scancode = 0xFE; break;  //Space
+    case 0x0B: scancode = 0x29; status &= 0b11111101; break;  //Z, Enter, Numpad Enter (Z)
+    //case 0x0B: if (ps2clk == 4) scancode = 0x29; else scancode = 0xFE; status &= 0b11111101; break;  //Z, Enter, Numpad Enter
+    case 0x13: if (ps2clk == 6) {if (status & 0b00000010) {scancode = 0xFF; status &= 0b11111101;} else scancode = 0x70;} else scancode = 0xFE; break;  //LShift (SHIFT), dismiss fake shifts
+    case 0x16: if (ps2clk == 8) scancode = 0x10; else scancode = 0xFE; break;  //Q
+    case 0x1A: scancode = 0x70; break;  //RShift (SHIFT)
+    //case 0x1A: if (ps2clk == 5) scancode = 0x70; else scancode = 0xFE; break;  //RShift (SHIFT)
+    case 0x33: scancode = 0x3D; status &= 0b11111101; break;  //Down, will stick if you press B, press and release down to fix, or use the line below (theoretically slower)
+    //case 0x33: if (ps2clk == 6) scancode = 0x3D; else scancode = 0xFE; status &= 0b11111101; break;  //Down
+    case 0x36: scancode = 0x3A; status &= 0b11111101; break;  //Up, will stick if you press Y, press and release down to fix, or use the line below (theoretically slower)
+    //case 0x36: if (ps2clk == 6) scancode = 0x3A; else scancode = 0xFE; status &= 0b11111101; break;  //Up
+    case 0x77: if (ps2clk == 8) scancode = 0x00; else scancode = 0xFE; break;  //Esc
+    //case 0x78: locktgl(1); break;  //Num Lock, indication will be broken, see locktgl
     //PRO TIP: press Num Lock odd number of times (once) after switching the map to reduce the amount of ignored scancodes (1 vs 4) generated when arrow keys are pressed with shift down.
     //         This, however, produces more scancodes for unshifted presses (3 vs 1), so not suitable for Reiiden, Fuumaroku, Yumejikuu... Depends on the LED status in normal operation.
-    case 0xE0: status |= 0b00000010; break;  //Set extend flag
-    case 0xE1: nextmap(); break;  //Pause Break (switch to next map)
-    case 0xF0: status |= 0b00000001; break;  //Set keybreak
+    case 0xE1: status |= 0b00000010; break;  //Set extend flag
+    case 0xE2: nextmap(); break;  //Pause Break (switch to next map)
+    case 0xF1: status |= 0b00000001; break;  //Set keybreak
     default: if (ps2clk == 8) scancode = 0xFF; else scancode = 0xFE;  //Invalid scancode (do not output)
   }
   pc98send(scancode);
 }
+
+void convgame() {  //Simple uniform 5-bit scan code set 3 predictive converter for games, should be faster overall (no need to wait for extends and fake shifts!!!)
+  if (ps2clk == 5) {  //Fast 5-bit mappings
+    switch (scancode) {                   //PS2 key (PC98 KEY, if different)
+      case 0x01: scancode = 0x3D; break;  //Down
+      case 0x02: scancode = 0x3B; break;  //C, , , Left (LEFT)
+      case 0x03: scancode = 0x2A; break;  //X, K, Pause (X)
+      case 0x04: scancode = 0x3A; break;  //D, I, Up (UP)
+      case 0x05: scancode = 0x12; break;  //E, O, Delete (E)
+      case 0x09: scancode = 0x00; break;  //Esc
+      case 0x0A: scancode = 0x34; break;  //Space, . , Numpad 1 (SPACE)
+      case 0x0B: scancode = 0x3C; break;  //V, /, Right (RIGHT)
+      case 0x0C: scancode = 0x20; break;  //F, L, Numpad 4, LWin (F)
+      case 0x0D: scancode = 0x14; break;  //T, ; , Numpad 7, RWin (T)
+      case 0x12: scancode = 0x74; break;  //LCtrl, N, Numpad . (CTRL)
+      case 0x13: scancode = 0x70; break;  //LShift, B, ', Numpad 2 (SHIFT)
+      case 0x14: scancode = 0x22; break;  //H, Numpad 5 (H)
+      case 0x15: scancode = 0x21; break;  //Caps Lock, G, [, Numpad 6 (G)
+      case 0x16: scancode = 0x10; break;  //Q, Y, =, Numpad 8 (Q)
+      case 0x19: scancode = 0x74; break;  //RCtrl (CTRL)
+      case 0x1A: scancode = 0x70; break;  //LAlt, RAlt, RShift, Numpad Enter (SHIFT)
+      case 0x1B: scancode = 0x29; break;  //Z, M, Enter, Numpad 3 (Z)
+      case 0x1C: scancode = 0x1E; break;  //S, J, ] (S)
+      case 0x1D: break;                   //A, U, Backslash, Numpad + (A)
+      default: scancode = 0xFE;  //Wait to receive the rest of the scancode
+    }
+    pc98send(scancode);
+  } else if (ps2clk == 8) {  //Slow 8-bit mappings, for occasions
+    switch (scancode) {                   //PS2 key (PC98 KEY, if different)
+      case 0x08: scancode = 0x62; break;  //F1
+      case 0x0E: scancode = 0x0F; break;  //Tab
+      case 0x0F: scancode = 0x1A; break;  //~ (@)
+      case 0x10: scancode = 0x63; break;  //F2
+      case 0x17: scancode = 0x01; break;  //1
+      case 0x18: scancode = 0x64; break;  //F3
+      case 0x1E: scancode = 0x11; break;  //W
+      case 0x1F: scancode = 0x02; break;  //2
+      case 0x20: scancode = 0x65; break;  //F4
+      case 0x26: scancode = 0x04; break;  //4
+      case 0x27: scancode = 0x03; break;  //3
+      case 0x28: scancode = 0x66; break;  //F5
+      case 0x2E: scancode = 0x13; break;  //R
+      case 0x2F: scancode = 0x05; break;  //5
+      case 0x30: scancode = 0x67; break;  //F6
+      case 0x37: scancode = 0x06; break;  //6
+      case 0x38: scancode = 0x68; break;  //F7
+      case 0x3E: scancode = 0x07; break;  //7
+      case 0x3F: scancode = 0x08; break;  //8
+      case 0x40: scancode = 0x69; break;  //F8
+      case 0x46: scancode = 0x0A; break;  //0
+      case 0x47: scancode = 0x09; break;  //9
+      case 0x48: scancode = 0x6A; break;  //F9
+      case 0x4E: scancode = 0x19; break;  //P
+      case 0x4F: scancode = 0x0B; break;  //-
+      case 0x50: scancode = 0x6B; break;  //F10
+      case 0x57: scancode = 0x52; break;  //F11 (VF1)
+      case 0x58: scancode = 0x60; break;  //Print Screen (STOP)
+      case 0x5F: scancode = 0x53; break;  //F12 (VF2)
+      case 0x60: nextmap(); break;        //Scroll Lock (switch to next map)
+      case 0x66: scancode = 0x3F; break;  //End (HELP)
+      case 0x67: scancode = 0x0E; break;  //Backspace
+      case 0x68: scancode = 0x38; break;  //Insert
+      case 0x6E: scancode = 0x36; break;  //Page Down (ROLL UP)
+      case 0x6F: scancode = 0x3E; break;  //Home (HOME CLR)
+      case 0x70: scancode = 0x37; break;  //Page Up (ROLL DOWN)
+      case 0x71: scancode = 0x1C; break;  //Numpad 0 (ENTER)
+      case 0x77: scancode = 0x61; break;  //Num Lock (COPY)
+      case 0x78: scancode = 0x0C; break;  //Numpad / (^)
+      case 0x7E: scancode = 0x39; break;  //Numpad 9 (DEL)
+      case 0x7F: scancode = 0x0D; break;  //Numpad * (YEN)
+      case 0x8E: scancode = 0x73; break;  //Menu (GRPH)
+      case 0xF1: status |= 0b00000001; break;  //Set keybreak
+      default: scancode = 0xFF;  //Invalid scancode (do not output)
+    }
+    pc98send(scancode);
+  } else scancode = 0;  //Ignore the rest of the bits
+}
+
 
 void convyume() {  //Comfortable layout for multiplayer in Yumejikuu, doesn't parse extend scancodes at all
   #ifdef usbser  //USB debugging
@@ -362,7 +485,7 @@ void convyume() {  //Comfortable layout for multiplayer in Yumejikuu, doesn't pa
     case 0x72: scancode = 0x4B; break;  //Numpad 2, Down ------- (P2 Down)
     case 0x73: scancode = 0x43; break;  //Numpad 5 ------------- (P2 Up)
     case 0x76: scancode = 0x00; break;  //Esc ------------------ (Pause)
-    //case 0x77: locktgl(1); break;  //Num Lock, indicators will be broken, see locktgl
+    //case 0x77: locktgl(1); break;  //Num Lock, indication will be broken, see locktgl
     case 0x7A: scancode = 0x48; break;  //Numpad 3, Page Down -- (P2 Right)
     case 0xE1: nextmap(); break;  //Pause Break (switch to next map)
     case 0xF0: status |= 0b00000001; break;  //Set keybreak
@@ -391,7 +514,7 @@ void convymsp() {  //Play against yourself in Yumejikuu, if you dare
     case 0x74: if (status & 0b00000010) {scancode = 0x3B; status &= 0b11111101;} else scancode = 0x48; break;  //Numpad 6 (P2 Right), Left (P2 Shot)
     case 0x75: scancode = 0x43; status &= 0b11111101; break;  //Numpad 8 (P2 Up)
     case 0x76: scancode = 0x00; break;  //Esc (Pause)
-    //case 0x77: locktgl(1); break;  //Num Lock, indicators will be broken, see locktgl
+    //case 0x77: locktgl(1); break;  //Num Lock, indication will be broken, see locktgl
     case 0xE0: status |= 0b00000010; break;  //Set extend flag
     case 0xE1: nextmap(); break;  //Pause Break (switch to next map)
     case 0xF0: status |= 0b00000001; break;  //Set keybreak
@@ -421,7 +544,7 @@ void ps2rxfast() {  //PS/2 receive interrupt for predictive conversion
   static uint32_t lasttime = 0;  //millis() value (time elapsed since MCU startup) during last interrupt
   uint32_t currtime = 0;  //Current millis() value
   ps2data |= (digitalRead(DATA) << ps2clk);  //Everything past ps2clk == 7 gets shifted away
-  scancode = ps2data;  //Pass current buffer outside every bit
+  scancode = ps2data + 1;  //Pass current buffer outside every bit (even if it's zero)
   currtime = millis();  //Start bit or check if the transmission was interrupted
   if (ps2clk > 9 || currtime - lasttime > 2) {  //1 ms sometimes produces errors, 2 ms is fine
     ps2clk = 0;  //Next bit is the first data bit
