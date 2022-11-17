@@ -236,7 +236,7 @@ void nextmap() {  //Switch to the next conversion table
     ledset(0x00);  //Turn off all LEDs
     if (status & 0b00001000) {  //If scan code set 3 is enabled
       delay(100);
-      ledset(0x01); delay(500);  //Turn on scroll lock LED for 200 ms to indicate scan code set 3
+      ledset(0x01); delay(500);  //Turn on scroll lock LED for 500 ms to indicate scan code set 3
       ledset(0x00);  //Turn off all LEDs
     }
   } else {
