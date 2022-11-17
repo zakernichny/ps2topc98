@@ -16,7 +16,7 @@ Cheap chinese DIY female Mini-DIN connectors should be avoided, at least in my e
 
 ### PC-98 Male Mini-DIN-8 Connector, looking at the pins
 
-![pc98conn](https://user-images.githubusercontent.com/32784787/202318302-e30bac6f-4704-455f-a904-82fc18dd5afa.png)
+![pc98conn](https://user-images.githubusercontent.com/32784787/202434054-251d8b98-587b-4ad7-8371-5231197af4f0.png)
 
 Pin 4 on some cheap connectors might need to be bent slightly to fit into the socket if it's right in the center when it should be offset.
 
