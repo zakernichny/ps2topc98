@@ -207,9 +207,8 @@ void nextmap() {  //Switch to the next conversion table
   if (map > 1 && status & 0b00001000) {  //For maps greater than 1 if scan code set was changed
     if (codeset(0x02) == 0x02) status &= 0b11110111;  //Try switching to scan code set 2 and unset scan code set 3 bit
     else {  //Otherwise don't switch and indicate an error
-      map--;  //Return to previous map
-      status &= 0b00001111;  //Reset map ID
-      status |= map << 5;  //Set new map ID
+      map = 0;  //Reset to the first map
+      status &= 0b00000100;  //Reset keybreak, extend, set 3 bit, predictive conversion and map ID
       ledset(0x01); delay(100);  //Error indication sequence
       ledset(0x04); delay(100);
       ledset(0x02); delay(100);
