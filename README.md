@@ -20,6 +20,10 @@ Cheap chinese DIY female Mini-DIN connectors should be avoided, at least in my e
 
 Pin 4 on some cheap connectors might need to be bent slightly to fit into the socket if it's right in the center when it should be offset.
 
+### PC-9801 Male DIN-8 Connector, looking at the pins
+
+![pc9801conn](https://user-images.githubusercontent.com/32784787/202553143-6fce22b0-44da-42a0-aa9c-52918f042584.png)
+
 ## Usage
 
 The converter provides different key maps for a variety of use cases. Press Pause Break to switch to the next map. Second map is unique as it can use Scan Code Set 3, in which case switching from it will require pressing Scroll Lock instead, due to conflicting scan codes. Existing maps can be easily customized and new maps for specific applications can be easily added, up to 8x2 maps, see the sources for more details. Included key maps and their features are provided in a table below.
