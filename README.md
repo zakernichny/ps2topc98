@@ -35,3 +35,9 @@ Map ID | Scan Code Set | Name | Indication (LED flashes) | Description | Switch 
 1 | 3 | Faster Set 3 Converter for Games | 2 short, all LEDs + 1 long, Scroll Lock | Scan Code Set 3 has a benefit of only outputting a single-byte make scan code and two-byte break scan code for any key. Combined with uniform 5-bit predictive conversion, this map provides conversion delays for most of the common keys in games as low as 420 μs! Using this map where Set 3 is available is strongly recommended over the Set 2 version. If switching to the next map fails with a cool LED light show a bit too often on your particular hardware, try adjusting the delay in the codeset funcion. | Scroll Lock | ID 2
 2 | 2 | 東方夢時空 Multiplayer Layout | 3 short, all LEDs | A subjectively more comfortable layout for multiplayer in Phantasmagoria of Dim.Dream. | Pause Break | ID 3
 3 | 2 | 東方夢時空 Solo Layout | 1 long and 1 short, all LEDs | Use both hands to play against yourself in Phantasmagoria of Dim.Dream. I can't seem to be able to process both sides of the screen at the same time, how about you? | Pause Break | ID 0
+
+### Default layout for ANSI keyboards
+
+![layout](https://user-images.githubusercontent.com/32784787/202906857-34e72956-d3ce-4d77-9fac-b1c68f4dc21a.png)
+
+JSON file for [Keyboard Layout Editor](http://www.keyboard-layout-editor.com/) is provided [here](layout.json). Green and orange legends represent ID 2 and ID 3 mappings respectively.
