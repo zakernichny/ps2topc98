@@ -300,7 +300,7 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
     case 0x34: scancode = 0x21; break;  //G
     case 0x35: scancode = 0x15; break;  //Y
     case 0x36: scancode = 0x06; break;  //6
-    case 0x37: scancode = 0x56; status &= 0b11111101; break;  //Power (VF5) <-------------------
+    case 0x37: scancode = 0x54; status &= 0b11111101; break;  //Power (VF3) <-------------------
     case 0x3A: scancode = 0x2F; break;  //M
     case 0x3B: scancode = 0x23; break;  //J
     case 0x3C: scancode = 0x16; break;  //U
@@ -327,7 +327,7 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
     case 0x5A: if (status & 0b00000010) {scancode = 0x4D; status &= 0b11111101;} else scancode = 0x1C; break;  //Enter, Numpad Enter (NUMPAD =) <-------------------
     case 0x5B: scancode = 0x28; break;  //] <-------------------
     case 0x5D: scancode = 0x0D; break;  //Backslash (YEN)
-    case 0x5E: scancode = 0x54; status &= 0b11111101; break;  //Wake (VF3) <-------------------
+    case 0x5E: scancode = 0x56; status &= 0b11111101; break;  //Wake (VF5) <-------------------
     case 0x66: scancode = 0x0E; break;  //Backspace
     case 0x69: if (status & 0b00000110) {scancode = 0x3F; status &= 0b11111101;} else scancode = 0x4A; break;  //Numpad 1, End (HELP)
     case 0x6B: if (status & 0b00000110) {scancode = 0x3B; status &= 0b11111101;} else scancode = 0x46; break;  //Numpad 4, Left
