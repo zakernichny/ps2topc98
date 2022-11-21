@@ -2,11 +2,11 @@
 
 ![convboard](https://user-images.githubusercontent.com/32784787/202309940-71aa7d5c-1b22-4544-8487-274933973721.png)
 
-A protocol converter that allows to use abundant PS/2 and AT keyboards with NEC PC-9800 series of personal computers. Runs on SparkFun Pro Micro 5V/16MHz Arduino boards or equivalents, can be easily adapted for any ATmega32u4-based boards.
+A protocol converter that allows to use abundant PS/2 and AT keyboards with NEC PC-9800 series of personal computers. Runs on 5V AVR Arduino boards.
 
 ## Hardware
 
-Connector pinouts for the default code configuration are shown below. Labels inside the pin symbols correspond to pins on a Pro Micro. VCC (+5VDC) is provided by the host PC-98 machine and used to power both the Pro Micro and the keyboard.
+Connector pinouts for the default code configuration are shown below. Labels inside the pin symbols correspond to pins on an Arduino. TX is the transmit pin of the board's hardware serial interface. VCC (+5VDC) is provided by the host PC-98 machine and used to power both the Pro Micro and the keyboard.
 
 ### PS/2 Female Mini-DIN-6 Connector, looking at the sockets
 
@@ -16,13 +16,13 @@ Cheap chinese DIY female Mini-DIN connectors should be avoided, at least in my e
 
 ### PC-98 Male Mini-DIN-8 Connector, looking at the pins
 
-![pc98conn](https://user-images.githubusercontent.com/32784787/202434054-251d8b98-587b-4ad7-8371-5231197af4f0.png)
+![pc98conn](https://user-images.githubusercontent.com/32784787/203018261-7aaf2aed-6e23-4cac-aa4c-19f40bf7b23e.png)
 
 Pin 4 on some cheap connectors might need to be bent slightly to fit into the socket if it's right in the center when it should be offset.
 
 ### PC-9801 Male DIN-8 Connector, looking at the pins
 
-![pc9801conn](https://user-images.githubusercontent.com/32784787/202553143-6fce22b0-44da-42a0-aa9c-52918f042584.png)
+![pc9801conn](https://user-images.githubusercontent.com/32784787/203018311-a8b89311-845f-401f-8fa0-c33f760efbc6.png)
 
 ## Usage
 
