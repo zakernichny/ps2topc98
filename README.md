@@ -38,6 +38,6 @@ Map ID | Scan Code Set | Name | Indication (LED flashes) | Description | Switch 
 
 ### Default layout for ANSI keyboards
 
-![layout](https://user-images.githubusercontent.com/32784787/202906857-34e72956-d3ce-4d77-9fac-b1c68f4dc21a.png)
+![layout](https://user-images.githubusercontent.com/32784787/203142249-dfa41f14-f1df-4e7c-91e9-6877c2cefb79.png)
 
 JSON file for [Keyboard Layout Editor](http://www.keyboard-layout-editor.com/) is provided [here](layout.json). Green and orange legends represent ID 2 and ID 3 mappings respectively.
