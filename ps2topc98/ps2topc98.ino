@@ -1,23 +1,37 @@
 ////////////////////////////////////////////////////////////////////////////////
-// PS/2 (AT) to PC-9800 Series keyboard converter V1.3                        //
-// copyleft zake 2022 (look, just don't sell arduinos with this for stupid    //
-// money on ebay or yahoo auctions or wherever)                               //
+// PS/2 (AT) to PC-9800 Series Keyboard Converter V1.3.1                      //
+// (intellectualpropertyisamistake) 2022 zake (look, just don't sell arduinos //
+// with this for stupid money on ebay or yahoo auctions or wherever)          //
 // Discord: zake#0138 (granted they haven't banned me again).                 //
 // Inspired by a project from AVX Studios                                     //
-// (https://pulsethread.com/pc98/ps2pc98arduino.html), therefore, only runs   //
-// on boards with at least two hardware serial interfaces (one is reserved    //
-// for programming). Might be possible to use software serial on cheaper      //
-// boards. Set up for and tested on a SparkFun Pro Micro clone (ATmega32U4).  //
+// (https://pulsethread.com/pc98/ps2pc98arduino.html).                        //
 // PC-98 and PS/2 interfaces are based on PC-9800 Series Technical Data Book  //
 // and amazing articles by Adam Chapweske on the topic respectively.          //
 ////////////////////////////////////////////////////////////////////////////////
 
-#define pc98ser Serial1  //PC-98 keyboard serial interface
-//#define usbser Serial  //Uncomment for USB serial debugging, disables PC-98 interface
+/***************** Parameters below are set for Arduino Nano ******************/
+/***************** and the wiring from README.md by default. ******************/
+/************** Make sure to go through them before programming! **************/
+
+//#define AVX  //Uncomment if you're using AVX hardware (https://pulsethread.com/pc98/PC9801/PC98PS2Micro.pdf)
+
+//PC-98 keyboard serial interface, make sure to use the right port name for your board
+#ifndef AVX
+#define pc98ser Serial  //For most ATmega328/ATmega168 boards (e.g. Arduino Nano)
+//#define pc98ser Serial1  //For most ATmega32U4 boards (e.g. Pro Micro)
+#else  //On AVX hardware (Pro Micro)
+#define pc98ser Serial1
+#endif
+//#define usbser Serial  //Uncomment for serial debugging, disables PC-98 interface
 
 //PS/2 interface pins
-#define DATA 2  //Pin 8 on AVX hardware
-#define CLOCK 3  //Pin 2 on AVX hardware, must be an interrupt-capable pin!
+#ifndef AVX
+#define DATA 2
+#define CLOCK 3  //Must be an interrupt-capable pin
+#else  //On AVX hardware (Pro Micro)
+#define DATA 8
+#define CLOCK 2
+#endif
 
 //PC-98 keyboard interface pins
 #define RST 4  //Reset
@@ -29,6 +43,11 @@
 
 #define numlock  //Enable num lock by default
 #define numkeep  //Keep num lock status on reset
+
+/******************************************************************************/
+/*************** End of relatively easily tweakable parameters. ***************/
+/******************************************************************************/
+
 //IMPORTANT: when num lock LED is lit or num lock key was pressed nav cluster and arrow keys produce
 //           E0 12 and E0 F0 12 ("fake shift") before make and after break scancodes, but don't produce
 //           the usual "fake unshifts" when shift key is held down. Should explain some of the comments.
