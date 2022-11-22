@@ -347,6 +347,8 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
     case 0x5B: scancode = 0x28; break;  //] <-------------------
     case 0x5D: scancode = 0x0D; break;  //Backslash (YEN)
     case 0x5E: scancode = 0x56; status &= 0b11111101; break;  //Wake (VF5) <-------------------
+    case 0x61: scancode = 0x0D; break;  //ISO Backslash (YEN)
+    //case 0x61: scancode = 0x70; break;  //ISO Backslash (SHIFT)
     case 0x66: scancode = 0x0E; break;  //Backspace
     case 0x69: if (status & 0b00000110) {scancode = 0x3F; status &= 0b11111101;} else scancode = 0x4A; break;  //Numpad 1, End (HELP)
     case 0x6B: if (status & 0b00000110) {scancode = 0x3B; status &= 0b11111101;} else scancode = 0x46; break;  //Numpad 4, Left
@@ -380,6 +382,7 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
 void convtoho() {  //Fast predictive converter for a certain game series, lots of phantom mappings (see if you can find an unintended feature)
   //Can't be easily debugged like other converters due to tight timings
   switch (scancode) {  //PS2 key (PC98 KEY, if different)
+    case 0x02: if (ps2clk == 4) scancode = 0x70; else scancode = 0xFE; break;  //ISO Backslash (SHIFT)
     case 0x03: if (ps2clk == 5) scancode = 0x2A; else scancode = 0xFE; break;  //X
     case 0x04: if (ps2clk == 3) scancode = 0x3B; else scancode = 0xFE; status &= 0b11111101; break;  //Left
     case 0x05: if (ps2clk == 3) scancode = 0x3C; else scancode = 0xFE; status &= 0b11111101; break; break;  //Right
@@ -421,7 +424,7 @@ void convgame() {  //Simple uniform 5-bit scan code set 3 predictive converter f
       case 0x0D: scancode = 0x14; break;  //T, ; , Numpad 7, RWin (T)
       case 0x12: scancode = 0x74; break;  //LCtrl, N, Numpad . (CTRL)
       case 0x13: scancode = 0x70; break;  //LShift, B, ', Numpad 2 (SHIFT)
-      case 0x14: scancode = 0x22; break;  //H, Numpad 5 (H)
+      case 0x14: scancode = 0x70; break;  //H, ISO Backslash, Numpad 5 (SHIFT)
       case 0x15: scancode = 0x21; break;  //Caps Lock, G, [, Numpad 6 (G)
       case 0x16: scancode = 0x10; break;  //Q, Y, =, Numpad 8 (Q)
       case 0x19: scancode = 0x74; break;  //RCtrl (CTRL)
