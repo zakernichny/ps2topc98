@@ -402,7 +402,6 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
 void convtoho() {  //Fast predictive converter for a certain game series, lots of phantom mappings (see if you can find an unintended feature)
   //Can't be easily debugged like other converters due to tight timings
   switch (scancode) {  //PS2 key (PC98 KEY, if different)
-    case 0x02: if (ps2clk == 8) scancode = 0x70; else scancode = 0xFE; break;  //ISO Backslash (SHIFT)
     case 0x03: if (ps2clk == 5) scancode = 0x2A; else scancode = 0xFE; break;  //X
     case 0x04: if (ps2clk == 3) scancode = 0x3B; else scancode = 0xFE; status &= 0b11111101; break;  //Left
     case 0x05: if (ps2clk == 3) scancode = 0x3C; else scancode = 0xFE; status &= 0b11111101; break; break;  //Right
@@ -417,6 +416,7 @@ void convtoho() {  //Fast predictive converter for a certain game series, lots o
     //case 0x33: if (ps2clk == 6) scancode = 0x3D; else scancode = 0xFE; status &= 0b11111101; break;  //Down
     case 0x36: scancode = 0x3A; status &= 0b11111101; break;  //Up, will stick if you press Y, press and release down to fix, or use the line below (theoretically slower)
     //case 0x36: if (ps2clk == 6) scancode = 0x3A; else scancode = 0xFE; status &= 0b11111101; break;  //Up
+    case 0x62: if (ps2clk == 8) scancode = 0x70; else scancode = 0xFE; break;  //ISO Backslash (SHIFT)
     case 0x77: if (ps2clk == 8) scancode = 0x00; else scancode = 0xFE; break;  //Esc
     //case 0x78: locktgl(1); break;  //Num Lock, indication will be broken, see locktgl
     //PRO TIP: press Num Lock odd number of times (once) after switching the map to reduce the amount of ignored scancodes (1 vs 4) generated when arrow keys are pressed with shift down.
