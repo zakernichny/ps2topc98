@@ -52,6 +52,9 @@
 //           E0 12 and E0 F0 12 ("fake shift") before make and after break scancodes, but don't produce
 //           the usual "fake unshifts" when shift key is held down. Should explain some of the comments.
 
+//NOTE: You would actually need to send a break scancode before sending a repeating make scancode for
+//typematic to fully comply with PC-98 documentation, but it's annoying to implement and it works as is.
+
 uint8_t ps2clk = 10;  //PS/2 interrupt clock counter
 uint8_t ps2data = 0;  //PS/2 interrupt data buffer
 uint8_t scancode = 0;  //Input PS/2 and output PC-98 scancode
@@ -213,8 +216,12 @@ void nextmap() {  //Switch to the next conversion table
   detachInterrupt(digitalPinToInterrupt(CLOCK));  //Detach PS/2 interrupt ASAP to ignore the rest of the scancodes for Pause Break
   delay(50);  //Wait until Pause Break is done vomiting scancodes
   if (scancode == 0x7E) {  //If Ctrl + Pause Break was pressed
-    status |= 0b00000001;  //Break CTRL press
-    scancode = 0x74;  //Send break scancode
+    status |= 0b00000001;  //Break LCtrl press
+    scancode = 0x74;  //Send break scancode for LCtrl
+    pc98send(scancode);
+    delay(20);  //This delay is an approximation, increase if something goes wrong
+    status |= 0b00000001;  //Break RCtrl press
+    scancode = 0x33;  //Send break scancode for RCtrl
     pc98send(scancode);  //Now scancode == 0
   }
   ps2clk = 10;  //In case interrupt fired
