@@ -402,7 +402,7 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
 void convtoho() {  //Fast predictive converter for a certain game series, lots of phantom mappings (see if you can find an unintended feature)
   //Can't be easily debugged like other converters due to tight timings
   switch (scancode) {  //PS2 key (PC98 KEY, if different)
-    case 0x02: if (ps2clk == 4) scancode = 0x70; else scancode = 0xFE; break;  //ISO Backslash (SHIFT)
+    case 0x02: if (ps2clk == 8) scancode = 0x70; else scancode = 0xFE; break;  //ISO Backslash (SHIFT)
     case 0x03: if (ps2clk == 5) scancode = 0x2A; else scancode = 0xFE; break;  //X
     case 0x04: if (ps2clk == 3) scancode = 0x3B; else scancode = 0xFE; status &= 0b11111101; break;  //Left
     case 0x05: if (ps2clk == 3) scancode = 0x3C; else scancode = 0xFE; status &= 0b11111101; break; break;  //Right
