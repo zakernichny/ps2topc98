@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// PS/2 (AT) to PC-9800 Series Keyboard Converter V1.3.1                      //
+// PS/2 (AT) to PC-9800 Series Keyboard Converter V1.3.2                      //
 // (intellectualpropertyisamistake) 2022 zake (look, just don't sell arduinos //
 // with this for stupid money on ebay or yahoo auctions or wherever)          //
 // Discord: zake#0138 (granted they haven't banned me again).                 //
@@ -63,6 +63,7 @@ uint8_t status = 0b00000100;  //Bit 0 - keybreak;
                               //bit 3 - scan code set 3;
                               //bit 4 - predictive conversion;
                               //bits 5-7 - map ID
+uint8_t macro[] = {0x21, 0x1D, 0x2F, 0x12, 0x2B, 0x2D, 0x1C};  //Scancodes that are sent on Alt + Print Screen (for map ID 0)
 
 void setup() {
   pinMode(RST, INPUT);
@@ -211,13 +212,18 @@ void nextmap() {  //Switch to the next conversion table
   int8_t map;
   detachInterrupt(digitalPinToInterrupt(CLOCK));  //Detach PS/2 interrupt ASAP to ignore the rest of the scancodes for Pause Break
   delay(50);  //Wait until Pause Break is done vomiting scancodes
+  if (scancode == 0x7E) {  //If Ctrl + Pause Break was pressed
+    status |= 0b00000001;  //Break CTRL press
+    scancode = 0x74;  //Send break scancode
+    pc98send(scancode);  //Now scancode == 0
+  }
   ps2clk = 10;  //In case interrupt fired
   map = status >> 5;  //Get map ID from status
   status &= 0b00001100;  //Reset keybreak, extend, predictive conversion and map ID
   if (map < 3) map++; else map = 0;  //Change condition when adding new maps, up to 8 total (0 through 7)
   status |= map << 5;  //Set new map ID
   if (map == 1) {  //Map 1 setup
-    if (locks >> 1 != 3 && codeset(0x03) == 0x03) {  //If the switch to scan code set 3 was successful
+    if (scancode != 0 && codeset(0x03) == 0x03) {  //If the switch to scan code set 3 was successful
       status |= 0b00001000;  //Set scan code set 3 bit
       ps2send(0xF8);  //Disable typematic
     }
@@ -225,7 +231,7 @@ void nextmap() {  //Switch to the next conversion table
   }
   if (map > 1 && status & 0b00001000) {  //For maps greater than 1 if scan code set was changed
     if (codeset(0x02) == 0x02) status &= 0b11110111;  //Try switching to scan code set 2 and unset scan code set 3 bit
-    else {  //Otherwise don't switch and indicate an error
+    else {  //Otherwise indicate an error
       map = 0;  //Reset to the first map
       status &= 0b00000100;  //Reset keybreak, extend, set 3 bit, predictive conversion and map ID
       ledset(0x01); delay(100);  //Error indication sequence
@@ -342,7 +348,7 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
     case 0x54: scancode = 0x1B; break;  //[ <-------------------
     case 0x55: scancode = 0x0C; break;  //= (^)
     case 0x58: locktgl(2); break;  //Caps Lock
-    case 0x59: scancode = 0x70; break;  //RShift (SHIFT)
+    case 0x59: if (status & 0b00000010) {scancode = 0xFF; status &= 0b11111101;} else scancode = 0x70; break;  //RShift (SHIFT), dismiss fake shifts
     case 0x5A: if (status & 0b00000010) {scancode = 0x4D; status &= 0b11111101;} else scancode = 0x1C; break;  //Enter, Numpad Enter (NUMPAD =) <-------------------
     case 0x5B: scancode = 0x28; break;  //] <-------------------
     case 0x5D: scancode = 0x0D; break;  //Backslash (YEN)
@@ -369,8 +375,15 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
     case 0x7B: scancode = 0x40; break;  //Numpad -
     case 0x7C: if (status & 0b00000010) {scancode = 0x60; status &= 0b11111101;} else scancode = 0x45; break;  //Numpad *, Print Screen (STOP) <-------------------
     case 0x7D: if (status & 0b00000110) {scancode = 0x37; status &= 0b11111101;} else scancode = 0x44; break;  //Numpad 9, Page Up (ROLL DOWN)
-    case 0x7E: scancode = 0x61; break;  //Scroll Lock (COPY) <-------------------
+    case 0x7E: if (status & 0b00000010) nextmap(); else scancode = 0x61; break;  //Scroll Lock (COPY), Ctrl + Pause Break (switch to next map) <-------------------
     case 0x83: scancode = 0x68; break;  //F7
+    case 0x84: if (!status & 0b00000001) for (uint8_t i = 0; i < sizeof(macro); i++) {
+        pc98send(macro[i]);  //Send macro make scancode
+        delay(20);  //This delay is an approximation, increase if something goes wrong
+        status |= 0b00000001;  //Signal key up
+        pc98send(macro[i]);  //Send macro break scancode
+        delay(20);  //This delay is an approximation, increase if something goes wrong
+      } scancode = 0xFF; break;  //Alt + Print Screen (macro)
     case 0xE0: status |= 0b00000010; break;  //Set extend flag
     case 0xE1: nextmap(); break;  //Pause Break (switch to next map)
     case 0xF0: status |= 0b00000001; break;  //Set keybreak
