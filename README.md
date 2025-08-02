@@ -7,6 +7,7 @@ A protocol converter that allows to use abundant PS/2 and AT keyboards with NEC 
 ## Hardware
 
 **Only requires wiring two connectors to a compatible Arduino board, no other hardware is needed.**
+
 Connector pinouts for the default code configuration are shown below. Labels inside the pin symbols correspond to pins on an Arduino. TX is the transmit pin of the board's hardware serial interface. VCC (+5VDC) is provided by the host PC-98 machine and used to power both the converter and the keyboard. ***Make sure the code is compatible with your hardware before programming***, defines for some common configurations are included.
 
 ### PS/2 Female Mini-DIN-6 Connector, looking at the sockets
