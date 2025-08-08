@@ -1,10 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-// PS/2 (AT) to PC-9800 Series Keyboard Converter V1.3.2                      //
-// (intellectualpropertyisamistake) 2022 zake (look, just don't sell arduinos //
-// with this for stupid money on ebay or yahoo auctions or wherever)          //
-// Discord: zake#0138 (granted they haven't banned me again).                 //
+// PS/2 (AT) to PC-9800 Series Keyboard Converter V1.3.3                      //
+// (intellectualpropertyisamistake) 2022-2025 zake (look, just don't sell     //
+// arduinos with this for stupid money on ebay or yahoo auctions or wherever) //
+// Discord: 3ake (granted they haven't banned me again).                      //
 // Inspired by a project from AVX Studios                                     //
-// (https://pulsethread.com/pc98/ps2pc98arduino.html).                        //
+// (https://web.archive.org/web/20221121090525/                               //
+//  https://pulsethread.com/pc98/ps2pc98arduino.html).                        //
 // PC-98 and PS/2 interfaces are based on PC-9800 Series Technical Data Book  //
 // and amazing articles by Adam Chapweske on the topic respectively.          //
 ////////////////////////////////////////////////////////////////////////////////
@@ -300,7 +301,7 @@ void convfull() {  //Full standard 101/102-key layout conversion, unusual mappin
     case 0x0D: scancode = 0x0F; break;  //Tab
     case 0x0E: scancode = 0x1A; break;  //~ (@) <-------------------
     //case 0x10: scancode = 0x55; break;  //F14 (VF4)
-    case 0x11: scancode = 0x55; status &= 0b11111101; break;  //LAlt, RAlt (GRPH)
+    case 0x11: scancode = 0x73; status &= 0b11111101; break;  //LAlt, RAlt (GRPH)
     case 0x12: if (status & 0b00000010) {scancode = 0xFF; status &= 0b11111101;} else scancode = 0x70; break;  //LShift (SHIFT), dismiss fake shifts
     case 0x14: if (status & 0b00000010) {scancode = 0x33; status &= 0b11111101;} else scancode = 0x74; break;  //LCtrl (CTRL), RCtrl (--) <-------------------
     case 0x15: scancode = 0x10; break;  //Q
@@ -618,3 +619,4 @@ void ps2tx() {  //PS/2 transmit interrupt
     parity = 1;  //Odd parity
   } else ps2clk++;  //Next bit
 }
+
